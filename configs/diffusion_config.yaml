@@ -1,0 +1,35 @@
+# Manifold Diffusion Configuration
+model:
+  name: "manifold-diffusion"
+  data_dim: 256
+  hidden_dim: 512
+  num_layers: 6
+  num_heads: 8
+  diffusion_steps: 1000
+  
+data:
+  dataset: "cifar10"  # or custom
+  image_size: 32
+  channels: 3
+  batch_size: 64
+  
+training:
+  learning_rate: 1e-4
+  epochs: 1000
+  save_every: 100
+  eval_every: 50
+  
+diffusion:
+  beta_start: 0.0001
+  beta_end: 0.02
+  beta_schedule: "linear"
+  
+manifold:
+  type: "implicit"
+  neighbors: 15
+  sigma: 1.0
+  
+logging:
+  project: "manifold-diffusion"
+  entity: "your-wandb-entity"
+  log_every_n_steps: 10

@@ -1,0 +1,29 @@
+# Disinformation Analyzer Configuration
+model:
+  name: "disinformation-analyzer"
+  backbone: "roberta-large"
+  num_classes: 2
+  dropout: 0.1
+  
+data:
+  train_path: "data/processed/train.csv"
+  val_path: "data/processed/val.csv"
+  test_path: "data/processed/test.csv"
+  batch_size: 32
+  max_length: 512
+  
+training:
+  learning_rate: 2e-5
+  epochs: 10
+  warmup_steps: 500
+  weight_decay: 0.01
+  gradient_clip_val: 1.0
+  
+evaluation:
+  metrics: ["accuracy", "f1", "precision", "recall", "auc_roc"]
+  save_predictions: true
+  
+logging:
+  project: "disinformation-analysis"
+  entity: "your-wandb-entity"
+  log_every_n_steps: 50
