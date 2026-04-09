@@ -86,7 +86,6 @@ dmypy.json
 .pyre/
 
 # AI/ML specific
-models/
 checkpoints/
 logs/
 wandb/
