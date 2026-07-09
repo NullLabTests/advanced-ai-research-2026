@@ -11,29 +11,32 @@ Features:
 - Monitoring
 """
 
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
 import asyncio
-import time
 import logging
-from datetime import datetime, timedelta
-import uuid
-from contextlib import asynccontextmanager
+import os
 
 # Add src to path
 import sys
-import os
+import time
+import uuid
+from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, Field
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from src.utils.cache import CacheManager
+from src.utils.monitoring import MetricsCollector
 
 from src.models.advanced_disinformation_analyzer import create_analyzer
 from src.models.manifold_diffusion_model import create_manifold_diffusion
-from src.utils.monitoring import MetricsCollector
-from src.utils.cache import CacheManager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -95,7 +98,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
     logger.info("Starting Advanced AI Research API...")
-    
+
     # Load models
     try:
         app_state["analyzer"] = create_analyzer(enable_explanations=True)
@@ -105,11 +108,11 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to load models: {e}")
         app_state["models_loaded"] = False
-    
+
     app_state["start_time"] = time.time()
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down Advanced AI Research API...")
 
@@ -140,21 +143,21 @@ async def rate_limit_middleware(request: Request, call_next):
     """Simple rate limiting middleware"""
     client_ip = request.client.host
     current_time = time.time()
-    
+
     # Check rate limit (simplified)
     key = f"rate_limit:{client_ip}"
     requests = cache.get(key) or []
     requests = [req_time for req_time in requests if current_time - req_time < 60]  # 1 minute window
-    
+
     if len(requests) > 100:  # 100 requests per minute
         return JSONResponse(
             status_code=429,
             content={"detail": "Rate limit exceeded"}
         )
-    
+
     requests.append(current_time)
     cache.set(key, requests, ttl=60)
-    
+
     response = await call_next(request)
     return response
 
@@ -173,11 +176,11 @@ async def root():
 async def health_check():
     """Health check endpoint"""
     uptime = time.time() - app_state.get("start_time", time.time())
-    
+
     # Get memory usage (simplified)
     import psutil
     memory = psutil.virtual_memory()
-    
+
     return HealthResponse(
         status="healthy" if app_state.get("models_loaded", False) else "degraded",
         version="1.0.0",
@@ -198,32 +201,32 @@ async def analyze_text(
 ):
     """Analyze text for disinformation"""
     start_time = time.time()
-    
+
     try:
         # Check cache
         cache_key = f"analysis:{hash(request.text)}"
         cached_result = cache.get(cache_key)
         if cached_result:
-            logger.info(f"Cache hit for text analysis")
+            logger.info("Cache hit for text analysis")
             return AnalysisResponse(
                 success=True,
                 data=cached_result,
                 processing_time=time.time() - start_time,
                 timestamp=datetime.utcnow().isoformat()
             )
-        
+
         # Perform analysis
         analyzer = app_state.get("analyzer")
         if not analyzer:
             raise HTTPException(status_code=503, detail="Models not loaded")
-        
+
         result = analyzer.analyze_text(
             request.text,
             human_score=request.human_score,
             human_weight=request.human_weight,
             return_explanation=request.include_explanation
         )
-        
+
         # Convert to dict
         result_dict = {
             "text": result.text,
@@ -238,10 +241,10 @@ async def analyze_text(
             "source_credibility": result.source_credibility,
             "timestamp": result.timestamp
         }
-        
+
         # Cache result
         cache.set(cache_key, result_dict, ttl=3600)  # 1 hour
-        
+
         # Log metrics
         background_tasks.add_task(
             metrics.record_analysis,
@@ -249,14 +252,14 @@ async def analyze_text(
             time.time() - start_time,
             result.final_risk_score
         )
-        
+
         return AnalysisResponse(
             success=True,
             data=result_dict,
             processing_time=time.time() - start_time,
             timestamp=datetime.utcnow().isoformat()
         )
-        
+
     except Exception as e:
         logger.error(f"Text analysis error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -269,20 +272,20 @@ async def analyze_batch(
 ):
     """Analyze multiple texts in batch"""
     start_time = time.time()
-    
+
     try:
         analyzer = app_state.get("analyzer")
         if not analyzer:
             raise HTTPException(status_code=503, detail="Models not loaded")
-        
+
         # Validate inputs
         if request.human_scores and len(request.human_scores) != len(request.texts):
             raise HTTPException(status_code=400, detail="Number of human scores must match number of texts")
-        
+
         # Process batch
         human_scores = request.human_scores if request.human_scores else [None] * len(request.texts)
         results = []
-        
+
         for text, human_score in zip(request.texts, human_scores):
             result = analyzer.analyze_text(
                 text,
@@ -290,7 +293,7 @@ async def analyze_batch(
                 human_weight=request.human_weight,
                 return_explanation=request.include_explanation
             )
-            
+
             results.append({
                 "text": result.text,
                 "final_risk_score": result.final_risk_score,
@@ -304,7 +307,7 @@ async def analyze_batch(
                 "source_credibility": result.source_credibility,
                 "timestamp": result.timestamp
             })
-        
+
         # Calculate batch statistics
         risk_scores = [r["final_risk_score"] for r in results]
         batch_stats = {
@@ -315,7 +318,7 @@ async def analyze_batch(
             "high_risk_count": sum(1 for score in risk_scores if score > 0.7),
             "results": results
         }
-        
+
         # Log metrics
         background_tasks.add_task(
             metrics.record_batch_analysis,
@@ -324,14 +327,14 @@ async def analyze_batch(
             len(request.texts),
             sum(risk_scores) / len(risk_scores)
         )
-        
+
         return AnalysisResponse(
             success=True,
             data=batch_stats,
             processing_time=time.time() - start_time,
             timestamp=datetime.utcnow().isoformat()
         )
-        
+
     except Exception as e:
         logger.error(f"Batch analysis error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -344,21 +347,21 @@ async def generate_manifold_samples(
 ):
     """Generate samples using manifold diffusion"""
     start_time = time.time()
-    
+
     try:
         manifold_model = app_state.get("manifold_model")
         if not manifold_model:
             raise HTTPException(status_code=503, detail="Models not loaded")
-        
+
         # Generate samples
         samples = manifold_model.sample(
             shape=(request.n_samples, request.data_dim),
             n_steps=request.diffusion_steps
         )
-        
+
         # Convert to list for JSON serialization
         samples_list = samples.tolist()
-        
+
         # Calculate sample statistics
         samples_np = samples.detach().cpu().numpy()
         stats = {
@@ -367,7 +370,7 @@ async def generate_manifold_samples(
             "min": samples_np.min(axis=0).tolist(),
             "max": samples_np.max(axis=0).tolist()
         }
-        
+
         result_data = {
             "samples": samples_list,
             "n_samples": request.n_samples,
@@ -376,7 +379,7 @@ async def generate_manifold_samples(
             "statistics": stats,
             "manifold_constraint": request.manifold_constraint
         }
-        
+
         # Log metrics
         background_tasks.add_task(
             metrics.record_generation,
@@ -384,14 +387,14 @@ async def generate_manifold_samples(
             time.time() - start_time,
             request.n_samples
         )
-        
+
         return AnalysisResponse(
             success=True,
             data=result_data,
             processing_time=time.time() - start_time,
             timestamp=datetime.utcnow().isoformat()
         )
-        
+
     except Exception as e:
         logger.error(f"Manifold generation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -419,22 +422,16 @@ async def submit_feedback(
     try:
         # Store feedback (in production, save to database)
         feedback_id = str(uuid.uuid4())
-        feedback_data = {
-            "id": feedback_id,
-            "user_id": current_user.get("user_id") if current_user else "anonymous",
-            "feedback": feedback,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
+
         # Log feedback
         logger.info(f"Feedback received: {feedback_id}")
-        
+
         return {
             "success": True,
             "feedback_id": feedback_id,
             "message": "Feedback submitted successfully"
         }
-        
+
     except Exception as e:
         logger.error(f"Feedback submission error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -444,7 +441,7 @@ async def submit_feedback(
 async def websocket_endpoint(websocket):
     """WebSocket endpoint for real-time updates"""
     await websocket.accept()
-    
+
     try:
         while True:
             # Send periodic updates
@@ -453,9 +450,9 @@ async def websocket_endpoint(websocket):
                 "data": metrics.get_all_metrics(),
                 "timestamp": datetime.utcnow().isoformat()
             })
-            
+
             await asyncio.sleep(10)  # Send updates every 10 seconds
-            
+
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:
