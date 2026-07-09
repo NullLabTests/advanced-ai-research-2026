@@ -9,9 +9,4 @@ from .multimodal_fusion import MultimodalFusionModel
 from .neural_symbolic_reasoner import NeuralSymbolicReasoner
 
 __version__ = "0.1.0"
-__all__ = [
-    "AdvancedDisinformationAnalyzer",
-    "ManifoldDiffusionModel",
-    "NeuralSymbolicReasoner",
-    "MultimodalFusionModel"
-]
+__all__ = ["AdvancedDisinformationAnalyzer", "ManifoldDiffusionModel", "NeuralSymbolicReasoner", "MultimodalFusionModel"]

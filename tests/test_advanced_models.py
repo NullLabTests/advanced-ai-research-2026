@@ -12,7 +12,7 @@ import pytest
 import torch
 
 # Add src to path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from src.models.advanced_disinformation_analyzer import AdvancedDisinformationAnalyzer, AnalysisResult, create_analyzer
 from src.models.manifold_diffusion_model import DiffusionConfig, ManifoldDiffusionModel, create_manifold_diffusion
@@ -24,14 +24,11 @@ class TestAdvancedDisinformationAnalyzer:
     @pytest.fixture
     def analyzer(self):
         """Create analyzer instance for testing"""
-        with patch('src.models.advanced_disinformation_analyzer.AutoModel'), \
-             patch('src.models.advanced_disinformation_analyzer.AutoTokenizer'):
-            return AdvancedDisinformationAnalyzer(
-                model_name="test-model",
-                hidden_dim=256,
-                dropout=0.1,
-                human_weight=0.7
-            )
+        with (
+            patch("src.models.advanced_disinformation_analyzer.AutoModel"),
+            patch("src.models.advanced_disinformation_analyzer.AutoTokenizer"),
+        ):
+            return AdvancedDisinformationAnalyzer(model_name="test-model", hidden_dim=256, dropout=0.1, human_weight=0.7)
 
     @pytest.fixture
     def sample_texts(self):
@@ -40,7 +37,7 @@ class TestAdvancedDisinformationAnalyzer:
             "This is a normal news article about local events.",
             "BREAKING: ALIENS HAVE LANDED! SHOCKING EVIDENCE REVEALED!!!",
             "Recent study shows correlation between exercise and health.",
-            "AMAZING CURE FOR ALL DISEASES DISCOVERED! DOCTORS HATE THIS!"
+            "AMAZING CURE FOR ALL DISEASES DISCOVERED! DOCTORS HATE THIS!",
         ]
 
     def test_analyzer_initialization(self, analyzer):
@@ -58,49 +55,42 @@ class TestAdvancedDisinformationAnalyzer:
         input_ids = torch.randint(0, 1000, (batch_size, seq_length))
         attention_mask = torch.ones(batch_size, seq_length)
 
-        with patch.object(analyzer.transformer, 'forward') as mock_transformer:
-            mock_transformer.return_value = Mock(
-                last_hidden_state=torch.randn(batch_size, seq_length, 256)
-            )
+        with patch.object(analyzer.transformer, "forward") as mock_transformer:
+            mock_transformer.return_value = Mock(last_hidden_state=torch.randn(batch_size, seq_length, 256))
 
             outputs = analyzer.forward(input_ids, attention_mask)
 
-            assert 'risk_logits' in outputs
-            assert 'emotion_logits' in outputs
-            assert 'coherence_score' in outputs
-            assert 'credibility_score' in outputs
-            assert 'risk_factors' in outputs
-            assert 'explanation_embedding' in outputs
-            assert 'embeddings' in outputs
+            assert "risk_logits" in outputs
+            assert "emotion_logits" in outputs
+            assert "coherence_score" in outputs
+            assert "credibility_score" in outputs
+            assert "risk_factors" in outputs
+            assert "explanation_embedding" in outputs
+            assert "embeddings" in outputs
 
     def test_analyze_text(self, analyzer, sample_texts):
         """Test text analysis functionality"""
         text = sample_texts[0]
 
-        with patch.object(analyzer, 'tokenizer') as mock_tokenizer, \
-             patch.object(analyzer, 'forward') as mock_forward:
-
+        with patch.object(analyzer, "tokenizer") as mock_tokenizer, patch.object(analyzer, "forward") as mock_forward:
             # Mock tokenizer
-            mock_tokenizer.return_value = {
-                "input_ids": torch.randint(0, 1000, (1, 10)),
-                "attention_mask": torch.ones(1, 10)
-            }
+            mock_tokenizer.return_value = {"input_ids": torch.randint(0, 1000, (1, 10)), "attention_mask": torch.ones(1, 10)}
 
             # Mock forward pass
             mock_forward.return_value = {
-                'risk_logits': torch.randn(1, 2),
-                'emotion_logits': torch.randn(1, 5),
-                'coherence_score': torch.sigmoid(torch.randn(1, 1)),
-                'credibility_score': torch.sigmoid(torch.randn(1, 1)),
-                'risk_factors': {
-                    'emotional_language': torch.sigmoid(torch.randn(1, 1)),
-                    'logical_fallacies': torch.sigmoid(torch.randn(1, 1)),
-                    'source_questions': torch.sigmoid(torch.randn(1, 1)),
-                    'urgency_tactics': torch.sigmoid(torch.randn(1, 1)),
-                    'conspiracy_indicators': torch.sigmoid(torch.randn(1, 1))
+                "risk_logits": torch.randn(1, 2),
+                "emotion_logits": torch.randn(1, 5),
+                "coherence_score": torch.sigmoid(torch.randn(1, 1)),
+                "credibility_score": torch.sigmoid(torch.randn(1, 1)),
+                "risk_factors": {
+                    "emotional_language": torch.sigmoid(torch.randn(1, 1)),
+                    "logical_fallacies": torch.sigmoid(torch.randn(1, 1)),
+                    "source_questions": torch.sigmoid(torch.randn(1, 1)),
+                    "urgency_tactics": torch.sigmoid(torch.randn(1, 1)),
+                    "conspiracy_indicators": torch.sigmoid(torch.randn(1, 1)),
                 },
-                'explanation_embedding': torch.randn(1, 100),
-                'embeddings': torch.randn(1, 256)
+                "explanation_embedding": torch.randn(1, 100),
+                "embeddings": torch.randn(1, 256),
             }
 
             result = analyzer.analyze_text(text)
@@ -119,28 +109,23 @@ class TestAdvancedDisinformationAnalyzer:
         text = sample_texts[0]
         human_score = 0.8
 
-        with patch.object(analyzer, 'tokenizer') as mock_tokenizer, \
-             patch.object(analyzer, 'forward') as mock_forward:
-
-            mock_tokenizer.return_value = {
-                "input_ids": torch.randint(0, 1000, (1, 10)),
-                "attention_mask": torch.ones(1, 10)
-            }
+        with patch.object(analyzer, "tokenizer") as mock_tokenizer, patch.object(analyzer, "forward") as mock_forward:
+            mock_tokenizer.return_value = {"input_ids": torch.randint(0, 1000, (1, 10)), "attention_mask": torch.ones(1, 10)}
 
             mock_forward.return_value = {
-                'risk_logits': torch.randn(1, 2),
-                'emotion_logits': torch.randn(1, 5),
-                'coherence_score': torch.sigmoid(torch.randn(1, 1)),
-                'credibility_score': torch.sigmoid(torch.randn(1, 1)),
-                'risk_factors': {
-                    'emotional_language': torch.sigmoid(torch.randn(1, 1)),
-                    'logical_fallacies': torch.sigmoid(torch.randn(1, 1)),
-                    'source_questions': torch.sigmoid(torch.randn(1, 1)),
-                    'urgency_tactics': torch.sigmoid(torch.randn(1, 1)),
-                    'conspiracy_indicators': torch.sigmoid(torch.randn(1, 1))
+                "risk_logits": torch.randn(1, 2),
+                "emotion_logits": torch.randn(1, 5),
+                "coherence_score": torch.sigmoid(torch.randn(1, 1)),
+                "credibility_score": torch.sigmoid(torch.randn(1, 1)),
+                "risk_factors": {
+                    "emotional_language": torch.sigmoid(torch.randn(1, 1)),
+                    "logical_fallacies": torch.sigmoid(torch.randn(1, 1)),
+                    "source_questions": torch.sigmoid(torch.randn(1, 1)),
+                    "urgency_tactics": torch.sigmoid(torch.randn(1, 1)),
+                    "conspiracy_indicators": torch.sigmoid(torch.randn(1, 1)),
                 },
-                'explanation_embedding': torch.randn(1, 100),
-                'embeddings': torch.randn(1, 256)
+                "explanation_embedding": torch.randn(1, 100),
+                "embeddings": torch.randn(1, 256),
             }
 
             result = analyzer.analyze_text(text, human_score=human_score)
@@ -149,7 +134,7 @@ class TestAdvancedDisinformationAnalyzer:
 
     def test_batch_analyze(self, analyzer, sample_texts):
         """Test batch analysis functionality"""
-        with patch.object(analyzer, 'analyze_text') as mock_analyze:
+        with patch.object(analyzer, "analyze_text") as mock_analyze:
             mock_analyze.return_value = Mock(
                 final_risk_score=0.5,
                 llm_judge_score=0.4,
@@ -160,7 +145,7 @@ class TestAdvancedDisinformationAnalyzer:
                 emotional_intensity=0.3,
                 logical_coherence=0.7,
                 source_credibility=0.8,
-                timestamp="2024-01-01T00:00:00"
+                timestamp="2024-01-01T00:00:00",
             )
 
             results = analyzer.batch_analyze(sample_texts, batch_size=2)
@@ -175,15 +160,15 @@ class TestAdvancedDisinformationAnalyzer:
         emotional_text = "AMAZING! SHOCKING! INCREDIBLE!!!"
         caps_text = "THIS IS ALL CAPS TEXT"
 
-        with patch.object(analyzer, 'forward') as mock_forward:
+        with patch.object(analyzer, "forward") as mock_forward:
             mock_forward.return_value = {
-                'emotion_logits': torch.randn(1, 5),
-                'coherence_score': torch.sigmoid(torch.randn(1, 1)),
-                'credibility_score': torch.sigmoid(torch.randn(1, 1)),
-                'risk_factors': {},
-                'explanation_embedding': torch.randn(1, 100),
-                'embeddings': torch.randn(1, 256),
-                'risk_logits': torch.randn(1, 2)
+                "emotion_logits": torch.randn(1, 5),
+                "coherence_score": torch.sigmoid(torch.randn(1, 1)),
+                "credibility_score": torch.sigmoid(torch.randn(1, 1)),
+                "risk_factors": {},
+                "explanation_embedding": torch.randn(1, 100),
+                "embeddings": torch.randn(1, 256),
+                "risk_logits": torch.randn(1, 2),
             }
 
             intensity_normal = analyzer._calculate_emotional_intensity(normal_text, mock_forward.return_value)
@@ -197,15 +182,15 @@ class TestAdvancedDisinformationAnalyzer:
 
     def test_simulate_human_judge(self, analyzer):
         """Test human judge simulation"""
-        with patch.object(analyzer, 'forward') as mock_forward:
+        with patch.object(analyzer, "forward") as mock_forward:
             mock_forward.return_value = {
-                'emotion_logits': torch.randn(1, 5),
-                'coherence_score': torch.sigmoid(torch.randn(1, 1)),
-                'credibility_score': torch.sigmoid(torch.randn(1, 1)),
-                'risk_factors': {},
-                'explanation_embedding': torch.randn(1, 100),
-                'embeddings': torch.randn(1, 256),
-                'risk_logits': torch.randn(1, 2)
+                "emotion_logits": torch.randn(1, 5),
+                "coherence_score": torch.sigmoid(torch.randn(1, 1)),
+                "credibility_score": torch.sigmoid(torch.randn(1, 1)),
+                "risk_factors": {},
+                "explanation_embedding": torch.randn(1, 100),
+                "embeddings": torch.randn(1, 256),
+                "risk_logits": torch.randn(1, 2),
             }
 
             # Test with emotional text
@@ -217,15 +202,12 @@ class TestAdvancedDisinformationAnalyzer:
     def test_generate_explanation(self, analyzer):
         """Test explanation generation"""
         outputs = {
-            'coherence_score': torch.tensor([[0.3]]),
-            'credibility_score': torch.tensor([[0.6]]),
-            'risk_factors': {
-                'emotional_language': torch.tensor([[0.8]]),
-                'logical_fallacies': torch.tensor([[0.2]])
-            }
+            "coherence_score": torch.tensor([[0.3]]),
+            "credibility_score": torch.tensor([[0.6]]),
+            "risk_factors": {"emotional_language": torch.tensor([[0.8]]), "logical_fallacies": torch.tensor([[0.2]])},
         }
 
-        risk_factors = ['Emotional Language']
+        risk_factors = ["Emotional Language"]
 
         explanation = analyzer._generate_explanation("test text", outputs, risk_factors)
 
@@ -245,11 +227,11 @@ class TestAdvancedDisinformationAnalyzer:
                 logical_coherence=np.random.random(),
                 source_credibility=np.random.random(),
                 confidence=np.random.random(),
-                risk_factors=['test_factor'] if np.random.random() > 0.5 else []
+                risk_factors=["test_factor"] if np.random.random() > 0.5 else [],
             )
             results.append(result)
 
-        with patch('matplotlib.pyplot.show'):
+        with patch("matplotlib.pyplot.show"):
             analyzer.visualize_analysis(results)
 
         # Should not raise any exceptions
@@ -264,7 +246,7 @@ class TestAdvancedDisinformationAnalyzer:
                 final_risk_score=np.random.random(),
                 llm_judge_score=np.random.random(),
                 human_judge_score=np.random.random(),
-                risk_factors=['test_factor'] if np.random.random() > 0.5 else []
+                risk_factors=["test_factor"] if np.random.random() > 0.5 else [],
             )
             results.append(result)
 
@@ -277,13 +259,10 @@ class TestAdvancedDisinformationAnalyzer:
 
     def test_create_analyzer_factory(self):
         """Test analyzer factory function"""
-        with patch('src.models.advanced_disinformation_analyzer.AdvancedDisinformationAnalyzer'):
-            analyzer = create_analyzer(
-                model_name="test-model",
-                human_weight=0.8,
-                enable_explanations=False
-            )
+        with patch("src.models.advanced_disinformation_analyzer.AdvancedDisinformationAnalyzer"):
+            analyzer = create_analyzer(model_name="test-model", human_weight=0.8, enable_explanations=False)
             assert analyzer is not None
+
 
 class TestManifoldDiffusionModel:
     """Test suite for ManifoldDiffusionModel"""
@@ -291,13 +270,7 @@ class TestManifoldDiffusionModel:
     @pytest.fixture
     def config(self):
         """Create configuration for testing"""
-        return DiffusionConfig(
-            data_dim=2,
-            hidden_dim=256,
-            num_layers=2,
-            diffusion_steps=50,
-            manifold_neighbors=5
-        )
+        return DiffusionConfig(data_dim=2, hidden_dim=256, num_layers=2, diffusion_steps=50, manifold_neighbors=5)
 
     @pytest.fixture
     def manifold_model(self, config):
@@ -337,14 +310,14 @@ class TestManifoldDiffusionModel:
         """Test manifold structure learning"""
         manifold_info = manifold_model.learn_manifold_structure(sample_data)
 
-        assert 'adjacency' in manifold_info
-        assert 'indices' in manifold_info
-        assert 'distances' in manifold_info
-        assert 'manifold_coords' in manifold_info
-        assert 'tangent_basis' in manifold_info
+        assert "adjacency" in manifold_info
+        assert "indices" in manifold_info
+        assert "distances" in manifold_info
+        assert "manifold_coords" in manifold_info
+        assert "tangent_basis" in manifold_info
 
-        assert manifold_info['adjacency'].shape[0] == len(sample_data)
-        assert manifold_info['manifold_coords'].shape[0] == len(sample_data)
+        assert manifold_info["adjacency"].shape[0] == len(sample_data)
+        assert manifold_info["manifold_coords"].shape[0] == len(sample_data)
 
     def test_forward_diffusion(self, manifold_model, sample_data):
         """Test forward diffusion process"""
@@ -415,15 +388,15 @@ class TestManifoldDiffusionModel:
 
         metrics = manifold_model.compute_manifold_metrics(sample_data)
 
-        assert 'intrinsic_dimensionality' in metrics
-        assert 'correlation_length' in metrics
-        assert 'manifold_preservation' in metrics
-        assert 'reconstruction_error' in metrics
+        assert "intrinsic_dimensionality" in metrics
+        assert "correlation_length" in metrics
+        assert "manifold_preservation" in metrics
+        assert "reconstruction_error" in metrics
 
         # Check that metrics are reasonable
-        assert metrics['intrinsic_dimensionality'] > 0
-        assert 0 <= metrics['manifold_preservation'] <= 1
-        assert metrics['reconstruction_error'] >= 0
+        assert metrics["intrinsic_dimensionality"] > 0
+        assert 0 <= metrics["manifold_preservation"] <= 1
+        assert metrics["reconstruction_error"] >= 0
 
     def test_intrinsic_dimensionality_estimation(self, manifold_model):
         """Test intrinsic dimensionality estimation"""
@@ -445,7 +418,7 @@ class TestManifoldDiffusionModel:
         # Generate samples
         generated_samples = manifold_model.sample((50, 2))
 
-        with patch('matplotlib.pyplot.show'):
+        with patch("matplotlib.pyplot.show"):
             manifold_model.visualize_manifold(sample_data, generated_samples)
 
         # Should not raise any exceptions
@@ -462,7 +435,7 @@ class TestManifoldDiffusionModel:
 
         generated_samples = model.sample((30, 3))
 
-        with patch('matplotlib.pyplot.show'):
+        with patch("matplotlib.pyplot.show"):
             model.visualize_manifold(data, generated_samples)
 
         assert True
@@ -478,7 +451,7 @@ class TestManifoldDiffusionModel:
 
         generated_samples = model.sample((30, 10))
 
-        with patch('matplotlib.pyplot.show'):
+        with patch("matplotlib.pyplot.show"):
             model.visualize_manifold(data, generated_samples)
 
         assert True
@@ -490,6 +463,7 @@ class TestManifoldDiffusionModel:
 
         # Save model
         import tempfile
+
         with tempfile.NamedTemporaryFile() as tmp:
             manifold_model.save_model(tmp.name)
 
@@ -503,14 +477,10 @@ class TestManifoldDiffusionModel:
 
     def test_create_manifold_diffusion_factory(self):
         """Test manifold diffusion factory function"""
-        with patch('src.models.manifold_diffusion_model.ManifoldDiffusionModel'):
-            model = create_manifold_diffusion(
-                data_dim=3,
-                hidden_dim=512,
-                diffusion_steps=200,
-                manifold_neighbors=10
-            )
+        with patch("src.models.manifold_diffusion_model.ManifoldDiffusionModel"):
+            model = create_manifold_diffusion(data_dim=3, hidden_dim=512, diffusion_steps=200, manifold_neighbors=10)
             assert model is not None
+
 
 class TestIntegration:
     """Integration tests for the complete system"""
@@ -519,13 +489,16 @@ class TestIntegration:
         """Test integration between analyzer and manifold model"""
         # This would test real integration scenarios
         # For now, just ensure they can be imported and instantiated together
-        with patch('src.models.advanced_disinformation_analyzer.AutoModel'), \
-             patch('src.models.advanced_disinformation_analyzer.AutoTokenizer'):
+        with (
+            patch("src.models.advanced_disinformation_analyzer.AutoModel"),
+            patch("src.models.advanced_disinformation_analyzer.AutoTokenizer"),
+        ):
             analyzer = create_analyzer()
             manifold_model = create_manifold_diffusion()
 
             assert analyzer is not None
             assert manifold_model is not None
+
 
 # Performance tests
 class TestPerformance:
@@ -533,18 +506,20 @@ class TestPerformance:
 
     def test_analyzer_performance(self):
         """Test analyzer performance with batch processing"""
-        with patch('src.models.advanced_disinformation_analyzer.AutoModel'), \
-             patch('src.models.advanced_disinformation_analyzer.AutoTokenizer'):
+        with (
+            patch("src.models.advanced_disinformation_analyzer.AutoModel"),
+            patch("src.models.advanced_disinformation_analyzer.AutoTokenizer"),
+        ):
             analyzer = AdvancedDisinformationAnalyzer(
                 model_name="test-model",
                 hidden_dim=128,  # Smaller for performance testing
-                dropout=0.1
+                dropout=0.1,
             )
 
             # Generate test texts
             texts = ["Test text " + str(i) for i in range(100)]
 
-            with patch.object(analyzer, 'analyze_text') as mock_analyze:
+            with patch.object(analyzer, "analyze_text") as mock_analyze:
                 mock_analyze.return_value = Mock(
                     final_risk_score=0.5,
                     llm_judge_score=0.4,
@@ -555,10 +530,11 @@ class TestPerformance:
                     emotional_intensity=0.3,
                     logical_coherence=0.7,
                     source_credibility=0.8,
-                    timestamp="2024-01-01T00:00:00"
+                    timestamp="2024-01-01T00:00:00",
                 )
 
                 import time
+
                 start_time = time.time()
                 results = analyzer.batch_analyze(texts, batch_size=32)
                 end_time = time.time()
@@ -571,7 +547,7 @@ class TestPerformance:
         config = DiffusionConfig(
             data_dim=2,
             hidden_dim=128,
-            diffusion_steps=50  # Fewer steps for performance testing
+            diffusion_steps=50,  # Fewer steps for performance testing
         )
         model = ManifoldDiffusionModel(config)
 
@@ -580,12 +556,14 @@ class TestPerformance:
         model.learn_manifold_structure(data)
 
         import time
+
         start_time = time.time()
         samples = model.sample((200, 2))
         end_time = time.time()
 
         assert samples.shape == (200, 2)
         assert (end_time - start_time) < 15.0  # Should complete within 15 seconds
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--cov=src/models", "--cov-report=html", "--cov-fail-under=90"])

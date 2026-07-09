@@ -41,5 +41,6 @@ def main(cfg: DictConfig) -> None:
     torch.save(model.state_dict(), model_save_path)
     print(f"Model saved to {model_save_path}")
 
+
 if __name__ == "__main__":
     main()

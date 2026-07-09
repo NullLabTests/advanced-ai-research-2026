@@ -23,9 +23,11 @@ from transformers import AutoModel, AutoTokenizer
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class AnalysisResult:
     """Structured result for disinformation analysis"""
+
     text: str
     final_risk_score: float
     llm_judge_score: float
@@ -38,10 +40,11 @@ class AnalysisResult:
     source_credibility: float
     timestamp: str
 
+
 class AdvancedDisinformationAnalyzer(nn.Module):
     """
     Advanced disinformation analyzer with human-grounded evaluation.
-    
+
     Implements the proxy-validity framework from arXiv:2604.06820
     with additional enhancements for real-world deployment.
     """
@@ -53,7 +56,7 @@ class AdvancedDisinformationAnalyzer(nn.Module):
         hidden_dim: int = 1024,
         dropout: float = 0.1,
         human_weight: float = 0.7,
-        enable_explanations: bool = True
+        enable_explanations: bool = True,
     ):
         super().__init__()
 
@@ -74,31 +77,22 @@ class AdvancedDisinformationAnalyzer(nn.Module):
 
         # Specialized heads
         self.risk_classifier = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim // 2, num_classes)
+            nn.Linear(hidden_dim, hidden_dim // 2), nn.ReLU(), nn.Dropout(dropout), nn.Linear(hidden_dim // 2, num_classes)
         )
 
         self.emotion_analyzer = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim // 2, 5)  # 5 emotion categories
+            nn.Linear(hidden_dim // 2, 5),  # 5 emotion categories
         )
 
         self.coherence_analyzer = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim // 2, 1)
+            nn.Linear(hidden_dim, hidden_dim // 2), nn.ReLU(), nn.Dropout(dropout), nn.Linear(hidden_dim // 2, 1)
         )
 
         self.source_credibility_analyzer = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim // 2, 1)
+            nn.Linear(hidden_dim, hidden_dim // 2), nn.ReLU(), nn.Dropout(dropout), nn.Linear(hidden_dim // 2, 1)
         )
 
         # Explanation generator
@@ -109,7 +103,7 @@ class AdvancedDisinformationAnalyzer(nn.Module):
                 nn.Dropout(dropout),
                 nn.Linear(hidden_dim // 2, hidden_dim // 4),
                 nn.ReLU(),
-                nn.Linear(hidden_dim // 4, 100)  # Explanation embedding
+                nn.Linear(hidden_dim // 4, 100),  # Explanation embedding
             )
 
         # Human feedback adaptation layer
@@ -117,17 +111,19 @@ class AdvancedDisinformationAnalyzer(nn.Module):
             nn.Linear(hidden_dim + 1, hidden_dim),  # +1 for human score
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim, hidden_dim)
+            nn.Linear(hidden_dim, hidden_dim),
         )
 
         # Risk factor detectors
-        self.risk_factor_detectors = nn.ModuleDict({
-            'emotional_language': self._create_risk_detector(),
-            'logical_fallacies': self._create_risk_detector(),
-            'source_questions': self._create_risk_detector(),
-            'urgency_tactics': self._create_risk_detector(),
-            'conspiracy_indicators': self._create_risk_detector()
-        })
+        self.risk_factor_detectors = nn.ModuleDict(
+            {
+                "emotional_language": self._create_risk_detector(),
+                "logical_fallacies": self._create_risk_detector(),
+                "source_questions": self._create_risk_detector(),
+                "urgency_tactics": self._create_risk_detector(),
+                "conspiracy_indicators": self._create_risk_detector(),
+            }
+        )
 
         # Initialize weights
         self._init_weights()
@@ -141,7 +137,7 @@ class AdvancedDisinformationAnalyzer(nn.Module):
             nn.Linear(256, 128),
             nn.ReLU(),
             nn.Linear(128, 1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def _init_weights(self):
@@ -157,17 +153,17 @@ class AdvancedDisinformationAnalyzer(nn.Module):
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor,
         human_scores: Optional[torch.Tensor] = None,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
     ) -> Dict[str, torch.Tensor]:
         """
         Forward pass of the advanced analyzer.
-        
+
         Args:
             input_ids: Tokenized input text
             attention_mask: Attention mask for transformer
             human_scores: Optional human judge scores
             metadata: Optional metadata about the source
-            
+
         Returns:
             Dictionary containing all analysis outputs
         """
@@ -180,17 +176,13 @@ class AdvancedDisinformationAnalyzer(nn.Module):
 
         # Apply human feedback adaptation if available
         if human_scores is not None:
-            adapted_embeddings = self.human_adapter(
-                torch.cat([pooled_embeddings, human_scores.unsqueeze(-1)], dim=-1)
-            )
+            adapted_embeddings = self.human_adapter(torch.cat([pooled_embeddings, human_scores.unsqueeze(-1)], dim=-1))
         else:
             adapted_embeddings = pooled_embeddings
 
         # Multi-head attention for different aspects
         text_features, _ = self.text_attention(
-            adapted_embeddings.unsqueeze(0),
-            adapted_embeddings.unsqueeze(0),
-            adapted_embeddings.unsqueeze(0)
+            adapted_embeddings.unsqueeze(0), adapted_embeddings.unsqueeze(0), adapted_embeddings.unsqueeze(0)
         )
         text_features = text_features.squeeze(0)
 
@@ -211,42 +203,32 @@ class AdvancedDisinformationAnalyzer(nn.Module):
             explanation_embedding = self.explanation_generator(text_features)
 
         return {
-            'risk_logits': risk_logits,
-            'emotion_logits': emotion_logits,
-            'coherence_score': coherence_score,
-            'credibility_score': credibility_score,
-            'risk_factors': risk_factors,
-            'explanation_embedding': explanation_embedding,
-            'embeddings': text_features
+            "risk_logits": risk_logits,
+            "emotion_logits": emotion_logits,
+            "coherence_score": coherence_score,
+            "credibility_score": credibility_score,
+            "risk_factors": risk_factors,
+            "explanation_embedding": explanation_embedding,
+            "embeddings": text_features,
         }
 
     def analyze_text(
-        self,
-        text: str,
-        human_score: Optional[float] = None,
-        metadata: Optional[Dict] = None,
-        return_explanation: bool = True
+        self, text: str, human_score: Optional[float] = None, metadata: Optional[Dict] = None, return_explanation: bool = True
     ) -> AnalysisResult:
         """
         Analyze text for disinformation risk.
-        
+
         Args:
             text: Input text to analyze
             human_score: Optional human judge score
             metadata: Optional metadata about the source
             return_explanation: Whether to generate explanation
-            
+
         Returns:
             AnalysisResult with comprehensive analysis
         """
         # Tokenize text
-        inputs = self.tokenizer(
-            text,
-            return_tensors="pt",
-            truncation=True,
-            max_length=512,
-            padding=True
-        )
+        inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=512, padding=True)
 
         # Prepare human score
         human_tensor = None
@@ -259,11 +241,11 @@ class AdvancedDisinformationAnalyzer(nn.Module):
                 input_ids=inputs["input_ids"],
                 attention_mask=inputs["attention_mask"],
                 human_scores=human_tensor,
-                metadata=metadata
+                metadata=metadata,
             )
 
         # Calculate scores
-        risk_probs = F.softmax(outputs['risk_logits'], dim=-1)
+        risk_probs = F.softmax(outputs["risk_logits"], dim=-1)
         llm_judge_score = risk_probs[0, 1].item()  # Probability of disinformation
 
         # Simulate human judge if not provided
@@ -273,16 +255,13 @@ class AdvancedDisinformationAnalyzer(nn.Module):
             human_judge_score = human_score
 
         # Calculate final risk score using proxy-validity framework
-        final_risk_score = (
-            self.human_weight * human_judge_score +
-            (1 - self.human_weight) * llm_judge_score
-        )
+        final_risk_score = self.human_weight * human_judge_score + (1 - self.human_weight) * llm_judge_score
 
         # Extract risk factors
         risk_factors = []
-        for name, score in outputs['risk_factors'].items():
+        for name, score in outputs["risk_factors"].items():
             if score[0, 0].item() > 0.5:  # Threshold for risk factor
-                risk_factors.append(name.replace('_', ' ').title())
+                risk_factors.append(name.replace("_", " ").title())
 
         # Generate explanation
         explanation = ""
@@ -291,8 +270,8 @@ class AdvancedDisinformationAnalyzer(nn.Module):
 
         # Calculate additional metrics
         emotional_intensity = self._calculate_emotional_intensity(text, outputs)
-        logical_coherence = outputs['coherence_score'][0, 0].item()
-        source_credibility = outputs['credibility_score'][0, 0].item()
+        logical_coherence = outputs["coherence_score"][0, 0].item()
+        source_credibility = outputs["credibility_score"][0, 0].item()
 
         # Confidence score
         confidence = torch.max(risk_probs).item()
@@ -308,22 +287,29 @@ class AdvancedDisinformationAnalyzer(nn.Module):
             emotional_intensity=emotional_intensity,
             logical_coherence=logical_coherence,
             source_credibility=source_credibility,
-            timestamp=self._get_timestamp()
+            timestamp=self._get_timestamp(),
         )
 
     def _simulate_human_judge(self, text: str, outputs: Dict) -> float:
         """Simulate human judge evaluation based on paper findings"""
         # Humans are more influenced by emotional content
         emotional_words = [
-            "amazing", "terrible", "shocking", "incredible", "disgusting",
-            "unbelievable", "horrifying", "miraculous", "devastating"
+            "amazing",
+            "terrible",
+            "shocking",
+            "incredible",
+            "disgusting",
+            "unbelievable",
+            "horrifying",
+            "miraculous",
+            "devastating",
         ]
 
         emotional_count = sum(1 for word in emotional_words if word.lower() in text.lower())
         emotional_influence = min(0.4, emotional_count * 0.08)
 
         # Consider logical coherence
-        coherence_influence = outputs['coherence_score'][0, 0].item() * 0.3
+        coherence_influence = outputs["coherence_score"][0, 0].item() * 0.3
 
         # Base score with influences
         base_score = 0.3
@@ -343,14 +329,14 @@ class AdvancedDisinformationAnalyzer(nn.Module):
             explanations.append(f"Risk factors detected: {', '.join(risk_factors)}")
 
         # Coherence explanation
-        coherence = outputs['coherence_score'][0, 0].item()
+        coherence = outputs["coherence_score"][0, 0].item()
         if coherence < 0.5:
             explanations.append("Text shows low logical coherence")
         elif coherence > 0.8:
             explanations.append("Text demonstrates strong logical structure")
 
         # Credibility explanation
-        credibility = outputs['credibility_score'][0, 0].item()
+        credibility = outputs["credibility_score"][0, 0].item()
         if credibility < 0.3:
             explanations.append("Source credibility appears questionable")
         elif credibility > 0.7:
@@ -368,41 +354,34 @@ class AdvancedDisinformationAnalyzer(nn.Module):
     def _calculate_emotional_intensity(self, text: str, outputs: Dict) -> float:
         """Calculate emotional intensity of text"""
         # Punctuation analysis
-        exclamation_count = text.count('!')
-        question_count = text.count('?')
+        exclamation_count = text.count("!")
+        question_count = text.count("?")
         caps_ratio = sum(1 for c in text if c.isupper()) / max(1, len(text))
 
         # Emotion logits from model
-        emotion_probs = F.softmax(outputs['emotion_logits'], dim=-1)
+        emotion_probs = F.softmax(outputs["emotion_logits"], dim=-1)
         max_emotion = torch.max(emotion_probs).item()
 
         # Combined intensity score
-        intensity = (
-            exclamation_count * 0.1 +
-            question_count * 0.05 +
-            caps_ratio * 0.3 +
-            max_emotion * 0.5
-        )
+        intensity = exclamation_count * 0.1 + question_count * 0.05 + caps_ratio * 0.3 + max_emotion * 0.5
 
         return min(intensity, 1.0)
 
     def _get_timestamp(self) -> str:
         """Get current timestamp"""
         from datetime import datetime
+
         return datetime.now().isoformat()
 
     def batch_analyze(
-        self,
-        texts: List[str],
-        human_scores: Optional[List[float]] = None,
-        batch_size: int = 8
+        self, texts: List[str], human_scores: Optional[List[float]] = None, batch_size: int = 8
     ) -> List[AnalysisResult]:
         """Analyze multiple texts in batches"""
         results = []
 
         for i in range(0, len(texts), batch_size):
-            batch_texts = texts[i:i+batch_size]
-            batch_human_scores = human_scores[i:i+batch_size] if human_scores else None
+            batch_texts = texts[i : i + batch_size]
+            batch_human_scores = human_scores[i : i + batch_size] if human_scores else None
 
             for j, text in enumerate(batch_texts):
                 human_score = batch_human_scores[j] if batch_human_scores else None
@@ -411,12 +390,7 @@ class AdvancedDisinformationAnalyzer(nn.Module):
 
         return results
 
-    def update_with_human_feedback(
-        self,
-        texts: List[str],
-        human_scores: List[float],
-        learning_rate: float = 1e-4
-    ):
+    def update_with_human_feedback(self, texts: List[str], human_scores: List[float], learning_rate: float = 1e-4):
         """Update model with human feedback"""
         # This would implement the human feedback learning loop
         # For now, it's a placeholder for the concept
@@ -426,23 +400,23 @@ class AdvancedDisinformationAnalyzer(nn.Module):
     def visualize_analysis(self, results: List[AnalysisResult], save_path: Optional[str] = None):
         """Create comprehensive visualization of analysis results"""
         fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-        fig.suptitle('Advanced Disinformation Analysis Results', fontsize=16, fontweight='bold')
+        fig.suptitle("Advanced Disinformation Analysis Results", fontsize=16, fontweight="bold")
 
         # Risk score distribution
         risk_scores = [r.final_risk_score for r in results]
-        axes[0, 0].hist(risk_scores, bins=20, alpha=0.7, color='red', edgecolor='black')
-        axes[0, 0].set_title('Risk Score Distribution')
-        axes[0, 0].set_xlabel('Risk Score')
-        axes[0, 0].set_ylabel('Frequency')
+        axes[0, 0].hist(risk_scores, bins=20, alpha=0.7, color="red", edgecolor="black")
+        axes[0, 0].set_title("Risk Score Distribution")
+        axes[0, 0].set_xlabel("Risk Score")
+        axes[0, 0].set_ylabel("Frequency")
 
         # Judge comparison
         llm_scores = [r.llm_judge_score for r in results]
         human_scores = [r.human_judge_score for r in results]
         axes[0, 1].scatter(llm_scores, human_scores, alpha=0.6, s=50)
-        axes[0, 1].plot([0, 1], [0, 1], 'r--', alpha=0.8)
-        axes[0, 1].set_title('LLM vs Human Judge Comparison')
-        axes[0, 1].set_xlabel('LLM Judge Score')
-        axes[0, 1].set_ylabel('Human Judge Score')
+        axes[0, 1].plot([0, 1], [0, 1], "r--", alpha=0.8)
+        axes[0, 1].set_title("LLM vs Human Judge Comparison")
+        axes[0, 1].set_xlabel("LLM Judge Score")
+        axes[0, 1].set_ylabel("Human Judge Score")
 
         # Risk factors
         all_risk_factors = []
@@ -455,37 +429,37 @@ class AdvancedDisinformationAnalyzer(nn.Module):
                 factor_counts[factor] = factor_counts.get(factor, 0) + 1
 
             axes[0, 2].bar(factor_counts.keys(), factor_counts.values(), alpha=0.7)
-            axes[0, 2].set_title('Risk Factor Frequency')
-            axes[0, 2].set_xlabel('Risk Factor')
-            axes[0, 2].set_ylabel('Count')
-            axes[0, 2].tick_params(axis='x', rotation=45)
+            axes[0, 2].set_title("Risk Factor Frequency")
+            axes[0, 2].set_xlabel("Risk Factor")
+            axes[0, 2].set_ylabel("Count")
+            axes[0, 2].tick_params(axis="x", rotation=45)
 
         # Emotional intensity vs risk
         emotional_intensities = [r.emotional_intensity for r in results]
-        axes[1, 0].scatter(emotional_intensities, risk_scores, alpha=0.6, s=50, c='orange')
-        axes[1, 0].set_title('Emotional Intensity vs Risk Score')
-        axes[1, 0].set_xlabel('Emotional Intensity')
-        axes[1, 0].set_ylabel('Risk Score')
+        axes[1, 0].scatter(emotional_intensities, risk_scores, alpha=0.6, s=50, c="orange")
+        axes[1, 0].set_title("Emotional Intensity vs Risk Score")
+        axes[1, 0].set_xlabel("Emotional Intensity")
+        axes[1, 0].set_ylabel("Risk Score")
 
         # Coherence vs credibility
         coherences = [r.logical_coherence for r in results]
         credibilities = [r.source_credibility for r in results]
-        axes[1, 1].scatter(coherences, credibilities, alpha=0.6, s=50, c='green')
-        axes[1, 1].set_title('Coherence vs Credibility')
-        axes[1, 1].set_xlabel('Logical Coherence')
-        axes[1, 1].set_ylabel('Source Credibility')
+        axes[1, 1].scatter(coherences, credibilities, alpha=0.6, s=50, c="green")
+        axes[1, 1].set_title("Coherence vs Credibility")
+        axes[1, 1].set_xlabel("Logical Coherence")
+        axes[1, 1].set_ylabel("Source Credibility")
 
         # Confidence distribution
         confidences = [r.confidence for r in results]
-        axes[1, 2].hist(confidences, bins=20, alpha=0.7, color='blue', edgecolor='black')
-        axes[1, 2].set_title('Confidence Distribution')
-        axes[1, 2].set_xlabel('Confidence Score')
-        axes[1, 2].set_ylabel('Frequency')
+        axes[1, 2].hist(confidences, bins=20, alpha=0.7, color="blue", edgecolor="black")
+        axes[1, 2].set_title("Confidence Distribution")
+        axes[1, 2].set_xlabel("Confidence Score")
+        axes[1, 2].set_ylabel("Frequency")
 
         plt.tight_layout()
 
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
         plt.show()
 
@@ -501,7 +475,7 @@ class AdvancedDisinformationAnalyzer(nn.Module):
 ## Summary
 - Total texts analyzed: {total_texts}
 - Average risk score: {avg_risk:.3f}
-- High-risk texts: {high_risk_count} ({high_risk_count/total_texts*100:.1f}%)
+- High-risk texts: {high_risk_count} ({high_risk_count / total_texts * 100:.1f}%)
 
 ## Judge Analysis
 - Average LLM judge score: {np.mean([r.llm_judge_score for r in results]):.3f}
@@ -541,15 +515,12 @@ Most common risk factors:
         else:
             return "Low risk detected. Continue standard monitoring procedures."
 
+
 # Factory function for easy instantiation
 def create_analyzer(
-    model_name: str = "roberta-large",
-    human_weight: float = 0.7,
-    enable_explanations: bool = True
+    model_name: str = "roberta-large", human_weight: float = 0.7, enable_explanations: bool = True
 ) -> AdvancedDisinformationAnalyzer:
     """Create and return an advanced disinformation analyzer"""
     return AdvancedDisinformationAnalyzer(
-        model_name=model_name,
-        human_weight=human_weight,
-        enable_explanations=enable_explanations
+        model_name=model_name, human_weight=human_weight, enable_explanations=enable_explanations
     )
