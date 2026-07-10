@@ -58,7 +58,7 @@ python-jose[cryptography]>=3.3.0
 # Deployment
 docker>=6.1.0
 kubernetes>=27.2.0
-helm>=0.13.0
+
 
 # Data science extras
 pandas>=2.0.0
