@@ -40,9 +40,5 @@ setup(
             "pre-commit>=3.3.0",
         ],
     },
-    entry_points={
-        "console_scripts": [
-            "ai-research=src.cli:main",
-        ],
-    },
+
 )
